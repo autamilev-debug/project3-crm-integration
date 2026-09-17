@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: project3
+      POSTGRES_USER: project3
+      POSTGRES_PASSWORD: project3-local
+    ports:
+      - "5433:5432"
+    volumes:
+      - project3_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U project3 -d project3"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://project3:project3-local@db:5432/project3
+    command: python -m project3_crm.worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://project3:project3-local@db:5432/project3
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://project3:project3-local@db:5432/project3
+    ports:
+      - "8000:8000"
+    command: >
+      uvicorn project3_crm.web:app
+      --host 0.0.0.0
+      --port 8000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+
+volumes:
+  project3_pgdata:

@@ -1,0 +1,5 @@
+Alembic migration environment for Project #3.
+
+The initial revision creates the Project #3 PostgreSQL schema and idempotently
+seeds the singleton integration runtime-state row. Apply migrations explicitly
+with `alembic upgrade head`; application startup never creates or migrates tables.
